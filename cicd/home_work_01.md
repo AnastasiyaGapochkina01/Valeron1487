@@ -73,74 +73,48 @@ func main() {
 ```
 - app.py
 ```
-package main
+import http.server
+import socket
+import os
+import getpass
 
-import (
-    "bufio"
-    "fmt"
-    "os"
-    "strconv"
-)
+# Получаем имя пользователя
+username = getpass.getuser()
 
-func main() {
-    // Создаем новый сканер для чтения ввода пользователя
-    scanner := bufio.NewScanner(os.Stdin)
+# Получаем версию ОС
+os_version = f"{os.sys.platform} {os.sys.version}"
 
-    fmt.Println("Simple calculator")
-    fmt.Println("1. addition")
-    fmt.Println("2. subtraction")
-    fmt.Println("3. multiplication")
-    fmt.Println("4. division")
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect(("8.8.8.8", 80))
+local_ip = s.getsockname()[0]
+s.close()
 
-    // Запрашиваем у пользователя номер операции
-    fmt.Print("Enter the operation number: ")
-    scanner.Scan()
-    operation, err := strconv.Atoi(scanner.Text())
-    if err != nil {
-        fmt.Println("Incorrect input")
-        return
-    }
+greeting = f"Привет, {username}!"
 
-    // Запрашиваем два числа
-    fmt.Print("Enter first number: ")
-    scanner.Scan()
-    num1, err := strconv.ParseFloat(scanner.Text(), 64)
-    if err != nil {
-        fmt.Println("Incorrect input")
-        return
-    }
+class RequestHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path != "/":
+            self.send_response(404)
+            self.send_header("Content-type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"404 Not Found")
+            return
 
-    fmt.Print("Enter second number: ")
-    scanner.Scan()
-    num2, err := strconv.ParseFloat(scanner.Text(), 64)
-    if err != nil {
-        fmt.Println("Incorrect input")
-        return
-    }
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
 
-    // Выполняем операцию
-    var result float64
-    switch operation {
-    case 1:
-        result = num1 + num2
-        fmt.Printf("%.2f + %.2f = %.2f\n", num1, num2, result)
-    case 2:
-        result = num1 - num2
-        fmt.Printf("%.2f - %.2f = %.2f\n", num1, num2, result)
-    case 3:
-        result = num1 * num2
-        fmt.Printf("%.2f * %.2f = %.2f\n", num1, num2, result)
-    case 4:
-        if num2 != 0 {
-            result = num1 / num2
-            fmt.Printf("%.2f / %.2f = %.2f\n", num1, num2, result)
-        } else {
-            fmt.Println("Division by zero!")
-        }
-    default:
-        fmt.Println("Incorrect operation number")
-    }
-}
+        response = f"Версия ОС: {os_version}\nПриветствие: {greeting}\nЛокальный IP: {local_ip}"
+        self.wfile.write(response.encode())
+
+def run_server():
+    server_address = ('', 3000)
+    httpd = http.server.HTTPServer(server_address, RequestHandler)
+    print("Сервер запущен на порту 3000")
+    httpd.serve_forever()
+
+if __name__ == "__main__":
+    run_server()
 ```
 3) Написать пайплайн, который будет прогонять линтеры для кода на go и python (две разные job) и собирает исполняемые файлы из кода (еще две разные job)
 - для go это делается с помощью команды ```go build -o $res_file $src_file```, где $res_file и $src_file - это итоговый файл и исходный код соответсвтенно
